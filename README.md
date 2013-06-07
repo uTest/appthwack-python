@@ -1,33 +1,33 @@
 thwacky
-=========
-[![Build Status](https://travis-ci.org/ahawker/thwacky.png)](https://travis-ci.org/ahawker/thwacky)
+=======
+[![Build Status](https://travis-ci.org/appthwack/thwacky.png)](https://travis-ci.org/appthwack/thwacky)
 [![Coverage Status](https://coveralls.io/repos/ahawker/thwacky/badge.png?branch=master)](https://coveralls.io/r/ahawker/thwacky)
 
 thwacky is a python client for the [AppThwack](http://www.appthwack.com) REST API.
 
-# Documentation
+## Documentation
 The latest AppThwack API documentation can be found [here](https://appthwack.com/docs/api).
 
-# Status
+## Status
 This module is currently under development.
 
-# Installation
+## Installation
 
-## Dependencies
+### Dependencies
 thwacky uses the wonderful [requests](https://github.com/kennethreitz/requests) library written by Kenneth Reitz.
 
-## Pip
+### Pip
 
-## Source
+### Source
 To install thwacky from source:
 ```bash
-    $ git clone git@github.com:ahawker/thwacky.git
+    $ git clone git@github.com:appthwack/thwacky.git
     $ python setup.py install
 ```
 
-# Usage
+## Usage
 
-# TODO
+## TODO
 
 * Ops
    * Repo migration
@@ -40,8 +40,8 @@ To install thwacky from source:
     * File upload/download
     * Tests (+ thwackbin)
 
-# Contributing
+## Contributing
 If you would like to contribute, simply fork the repository, push your changes and send a pull request.
 
-# License
-thwacky license information can be found [here](https://github.com/ahawker/thwacky/blob/master/LICENSE.md).
+## License
+thwacky license information can be found [here](https://github.com/appthwack/thwacky/blob/master/LICENSE.md).
