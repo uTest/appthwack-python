@@ -1,6 +1,6 @@
 __author__ = 'Andrew Hawker <andrew@appthwack.com>'
 
-import thwacky
+import appthwack
 
 try:
     from setuptools import setup
@@ -8,19 +8,19 @@ except ImportError:
     from distutils.core import setup
 
 setup(
-    name=thwacky.__name__,
-    version=thwacky.__version__,
-    description='Python client for AppThwack REST API.',
+    name=appthwack.__name__,
+    version=appthwack.__version__,
+    description='AppThwack python client',
     long_description=open('README.md').read(),
     author='Andrew Hawker',
     author_email='andrew@appthwack.com',
-    url='https://github.com/ahawker/thwacky',
+    url='https://github.com/appthwack/appthwack-python',
     license=open('LICENSE.md').read(),
-    package_dir={'thwacky': 'thwacky'},
-    packages=['thwacky'],
+    package_dir={'appthwack': 'appthwack'},
+    packages=['appthwack'],
     test_suite='tests',
     classifiers=(
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'License :: OSI Approved :: MIT License',

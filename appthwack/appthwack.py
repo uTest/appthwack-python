@@ -1,24 +1,23 @@
 """
-    thwacky
+    appthwack.appthwack
     ~~~~~~~
 
-    thwacky is a python client for the AppThwack REST API.
+    Contains all functionality of the AppThwack client.
 """
-__name__ = 'thwacky'
-__version__ = '0.0.1'
 __author__ = 'Andrew Hawker <andrew@appthwack.com>'
-
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
 
 import functools
 import os
 import requests
 import urllib
 
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
+
 DOMAIN = 'https://appthwack.com'
+
 
 def urlify(*resources, **params):
     """
@@ -39,7 +38,7 @@ def keyword_filter(keys, **kwargs):
     :param keys: Iterable containing keys we which is search kwargs for.
     :param kwargs: Mapping which contains key/value pairs we're filtering down.
     """
-    return next(((k, str(v)) for (k,v) in ((k, kwargs.get(k)) for k in keys) if v), (None, None))
+    return next(((k, str(v)) for (k, v) in ((k, kwargs.get(k)) for k in keys) if v), (None, None))
 
 
 class AppThwackApiError(Exception):
@@ -193,13 +192,15 @@ class AppThwackProject(AppThwackObject, RequestsMixin):
     Represents an AppThwack project as returned by `AppThwackApi`.
     """
     attributes = 'id name url'.split()
-    optional_args = []
 
     def __init__(self, **kwargs):
         super(AppThwackProject, self).__init__(**kwargs)
         self.url = urlify('project', self.url)
 
-    def pool(self, **kwargs):
+    def __str__(self):
+        return self.url
+
+    def device_pool(self, **kwargs):
         """
         Return a single `AppThwackDevicePool` based on the kwarg filter. If no filter is given,
         the first devicepool is returned.
@@ -207,9 +208,9 @@ class AppThwackProject(AppThwackObject, RequestsMixin):
         :param kwargs: 'id' or 'name' value to retrieve a specific devicepool.
         """
         k, v = keyword_filter(('id', 'name'), **kwargs)
-        return next(filter(lambda p: getattr(p, str(k)) == v, self.pools()))
+        return next(filter(lambda p: getattr(p, str(k)) == v, self.device_pools()))
 
-    def pools(self):
+    def device_pools(self):
         """
         Return a list of all `AppThwackDevicePool` tied to this account.
 
@@ -218,40 +219,116 @@ class AppThwackProject(AppThwackObject, RequestsMixin):
         data = self.get('devicepools', self.id).json()
         return [AppThwackDevicePool(**p) for p in data]
 
-    def run(self, name, app, **kwargs):
+    def _schedule_run(self, app, name, **kwargs):
         """
         Schedule a run on AppThwack.
 
         :param name: Name of run to be used on AppThwack.
-        :param app: `AppThwackFile` which represents the upload app (.apk or .ipa).
+        :param app: `AppThwackFile` which represents the upload app (.apk or .ipa)..
         :param kwargs: Mapping of optional args which describe execution options.
 
         .. endpoint:: [POST] /api/run
         """
         req = dict(project=self.id, name=name, app=app)
-        opt = dict((k,v) for (k,v) in ((k, kwargs.get(k)) for k in self.optional_args) if v)
+        opt = dict((k, v) for (k, v) in kwargs.items() if v is not None)
         data = self.post('run', data=dict(req, **opt)).json()
         return AppThwackRun(self.id, **data)
 
 
 class AppThwackAndroidProject(AppThwackProject):
-    optional_args = 'pool username password launchdata eventcount monkeyseed calabash junit'.split()
-
+    """
+    Represents Android specific AppThwack project.
+    """
     def __init__(self, **kwargs):
         super(AppThwackAndroidProject, self).__init__(**kwargs)
 
+    def schedule_junit_run(self, app, test_app, name, pool=None):
+        """
+        Schedule JUnit/Robotium run.
+
+        :param app: `AppThwackFile` which represents the uploaded .apk.
+        :param test_app: `AppThwackFile` which represents the uploaded tests .apk.
+        :param name: Name of the run which appears on AppThwack.
+        :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
+        """
+        return self._schedule_run(app.file_id, name, pool=pool, junit=test_app.file_id)
+
+    def schedule_calabash_run(self, app, scripts, name, pool=None):
+        """
+        Schedule Calabash run.
+
+        :param app: `AppThwackFile` which represents the uploaded .apk.
+        :param scripts: `AppThwackFile` which represents the uploaded features.zip.
+        :param name: Name of the run which appears on AppThwack.
+        :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
+        """
+        return self._schedule_run(app.file_id, name, pool=pool, calabash=scripts.file_id)
+
+    def schedule_monkeytalk_run(self, *args, **kwargs):
+        raise NotImplementedError('TODO')
+
+    def schedule_app_explorer_run(self, app, name, pool=None, **kwargs):
+        """
+        Schedule AppThwack AppExplorer run.
+
+        :param app: `AppThwackFile` which represents the uploaded .apk.
+        :param name: Name of the run which appears on AppThwack.
+        :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
+        :param kwargs: (optional) Options to configure the AppExplorer.
+        """
+        explorer_args = dict((k, kwargs.get(k)) for k in 'username password launchdata eventcount monkeyseed'.split())
+        return self._schedule_run(app.file_id, name, pool=pool, **explorer_args)
+
 
 class AppThwackIOSProject(AppThwackProject):
-    optional_args = 'pool uia calabash kif'.split()
-
+    """
+    Represents iOS specific AppThwack project.
+    """
     def __init__(self, **kwargs):
         super(AppThwackIOSProject, self).__init__(**kwargs)
 
+    def schedule_uia_run(self, app, scripts, name, pool=None):
+        """
+        Schedule UIA run.
+
+        :param app: `AppThwackFile` which represents the uploaded .ipa,
+        :param scripts: `AppThwackFile` which represents the uploaded tests.
+        :param name: Name of the run which appears on AppThwack.
+        :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
+        """
+        return self._schedule_run(app.file_id, name, pool=pool, uia=scripts.file_id)
+
+    def schedule_calabash_run(self, app, scripts, name, pool=None):
+        """
+        Schedule Calabash run.
+
+        :param app: `AppThwackFile` which represents the uploaded .apk.
+        :param scripts: `AppThwackFile` which represents the uploaded features.zip.
+        :param name: Name of the run which appears on AppThwack.
+        :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
+        """
+        return self._schedule_run(app.file_id, name, pool=pool, calabash=scripts.file_id)
+
+    def schedule_kif_run(self, app, name, pool=None):
+        """
+        Schedule KIF run.
+
+        :param app: `AppThwackFile` which represents the uploaded .apk.
+        :param name: Name of the run which appears on AppThwack.
+        :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
+        """
+        return self._schedule_run(app.file_id, name, pool=pool, kif='')
+
 
 class AppThwackWebProject(AppThwackProject):
+    """
+    Represents Responsive Web specific AppThwack project.
+    """
     def __init__(self, **kwargs):
         super(AppThwackWebProject, self).__init__(**kwargs)
 
+    def schedule_web_run(self, url, name):
+        return self._schedule_run(url, name)
 
 
 class AppThwackRun(AppThwackObject, RequestsMixin):
@@ -265,6 +342,9 @@ class AppThwackRun(AppThwackObject, RequestsMixin):
         self.url = urlify('run', project_id, self.run_id)
         self.download_url = urlify(self.url, format='archive')
 
+    def __str__(self):
+        return self.url
+
     def status(self):
         """
         Return the execution status for this specific run.
@@ -272,7 +352,7 @@ class AppThwackRun(AppThwackObject, RequestsMixin):
         .. endpoint:: [GET] /api/run/<int:project_id>/<int:run_id>/status
         """
         data = self.get(self.url, 'status').json()
-        return data['status'] #TODO confirm structure
+        return data.get('status')
 
     def results(self):
         """
@@ -315,6 +395,9 @@ class AppThwackFile(AppThwackObject):
         super(AppThwackFile, self).__init__(**kwargs)
         self.url = urlify('file', self.file_id)
 
+    def __str__(self):
+        return self.url
+
 
 class AppThwackDevicePool(AppThwackObject):
     """
@@ -325,3 +408,6 @@ class AppThwackDevicePool(AppThwackObject):
     def __init__(self, **kwargs):
         super(AppThwackDevicePool, self).__init__(**kwargs)
         self.url = urlify('devicepool', self.id)
+
+    def __str__(self):
+        return self.url
