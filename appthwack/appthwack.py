@@ -17,18 +17,7 @@ except ImportError:
     import StringIO
 
 DOMAIN = 'https://appthwack.com'
-
-
-def urlify(*resources, **params):
-    """
-    Build a URL to a REST endpoint.
-
-    :param resources: Tuple of resources which describe the endpoint.
-    :param params: Mapping which builds url query string.
-    """
-    url = '/'.join((DOMAIN,) + filter(None, resources))
-    qstring = urllib.urlencode(params)
-    return '?'.join(filter(None, (url, qstring)))
+ROOT = 'api'
 
 
 def keyword_filter(keys, **kwargs):
@@ -38,7 +27,7 @@ def keyword_filter(keys, **kwargs):
     :param keys: Iterable containing keys we which is search kwargs for.
     :param kwargs: Mapping which contains key/value pairs we're filtering down.
     """
-    return next(((k, str(v)) for (k, v) in ((k, kwargs.get(k)) for k in keys) if v), (None, None))
+    return next(iter(((k, str(v)) for (k, v) in ((k, kwargs.get(k)) for k in keys) if v)), (None, None))
 
 
 class AppThwackApiError(Exception):
@@ -63,7 +52,7 @@ def expects(expected_status_code, expected_content_type):
             if status_code != expected_status_code:
                 msg = 'Got status code {0}; expected {1} with response {2}.'.format(status_code,
                                                                                     expected_status_code,
-                                                                                    response.json())
+                                                                                    response.json)
                 raise AppThwackApiError(msg)
             #Unexpected response content-type is considered an 'exceptional' case.
             if bool(content_type) != bool(expected_content_type) or \
@@ -83,8 +72,13 @@ class RequestsMixin(object):
     """
 
     API_KEY = None
+    DOMAIN = None
+    ROOT = None
     SESSION_DEFAULTS = {
         'verify': False,
+        'headers': {
+            'user-agent': 'appthwack-python/1.0'
+        }
     }
 
     @expects(200, 'application/json')
@@ -95,7 +89,9 @@ class RequestsMixin(object):
         :param resources: List of resources which build the URL we wish to use.
         :param kwargs: Mapping of options to use for this specific HTTP request.
         """
-        return requests.get(urlify('api', *resources), **self._session_config(**kwargs))
+        url = self._urlify(*resources)
+        config = self._session_config(**kwargs)
+        return requests.get(url, **config)
 
     @expects(200, 'application/json')
     def post(self, *resources, **kwargs):
@@ -105,7 +101,9 @@ class RequestsMixin(object):
         :param resources: List of resources which build the URL we wish to use.
         :param kwargs: Mapping of options to use for this specific HTTP request.
         """
-        return requests.post(urlify('api', *resources), **self._session_config(**kwargs))
+        url = self._urlify(*resources)
+        config = self._session_config(**kwargs)
+        return requests.post(url, **config)
 
     def _session_config(self, **kwargs):
         """
@@ -113,19 +111,36 @@ class RequestsMixin(object):
         """
         return dict(self.SESSION_DEFAULTS, auth=(self.API_KEY, None), **kwargs)
 
+    @classmethod
+    def _urlify(cls, *resources, **params):
+        """
+        Build a URL to a REST endpoint.
+
+        :param resources: Tuple of resources which describe the endpoint.
+        :param params: Mapping which builds url query string.
+        """
+        url = '/'.join(map(str, ((cls.DOMAIN, cls.ROOT) + filter(None, resources))))
+        qstring = urllib.urlencode(params)
+        return '?'.join(filter(None, (url, qstring)))
+
 
 class AppThwackApi(RequestsMixin):
     """
     Client object which exposes access to top level endpoints (/api).
     """
-    def __init__(self, api_key=None):
+    def __init__(self, api_key=None, domain=DOMAIN, root=ROOT):
         """
         :param api_key: AppThwack account API key, default is 'APPTHWACK_API_KEY' environment variable.
+        :param domain: Server domain which is hosting AppThwack api. Used for testing. Defaults to https://appthwack.com
+        :param root: API endpoint root. Used for testing. Defaults to /api.
         """
         key = api_key or os.environ.get('APPTHWACK_API_KEY')
         if not key:
             raise ValueError('AppThwack API key must be provided.')
-        RequestsMixin.API_KEY = key #TODO (reconsider this) -- especially if/when stdlib support added
+        #TODO (reconsider this) -- especially if/when stdlib support added
+        RequestsMixin.API_KEY = key
+        RequestsMixin.DOMAIN = domain
+        RequestsMixin.ROOT = root
 
     def project(self, **kwargs):
         """
@@ -135,7 +150,7 @@ class AppThwackApi(RequestsMixin):
         :param kwargs: 'id' or 'name' value to retrieve a specific project.
         """
         k, v = keyword_filter(('id', 'name'), **kwargs)
-        return next(filter(lambda p: getattr(p, str(k)) == v, self.projects()))
+        return next(iter(filter(lambda p: str(getattr(p, str(k))) == v, self.projects())), None)
 
     def projects(self):
         """
@@ -143,15 +158,15 @@ class AppThwackApi(RequestsMixin):
 
         .. endpoint:: [GET] /api/project
         """
-        data = self.get('project').json()
+        data = self.get('project').json
         return [AppThwackProject(**p) for p in data]
 
     def upload(self, path, name=None):
         """
         Upload a app (.apk or .ipa) to AppThwack.
 
-        :param path: Local filepath to app you wish to upload.
-        :param name: Name of app visible on AppThwack, default is local filename.
+        :param path: Local file path to app you wish to upload.
+        :param name: Name of app visible on AppThwack, Defaults to local filename.
 
         .. endpoint:: [POST] /api/file
         """
@@ -163,11 +178,11 @@ class AppThwackApi(RequestsMixin):
         if not name:
             name = os.path.basename(root) + ext
         with open(path, 'r') as fileobj:
-            data = self.post('file', data={'name': name}, files={name: fileobj}).json()
+            data = self.post('file', data=dict(name=name), files=dict(file=fileobj)).json
             return AppThwackFile(**data)
 
 
-class AppThwackObject(object):
+class AppThwackObject(RequestsMixin):
     """
     Generic object built from JSON data returned from AppThwack.
     """
@@ -187,18 +202,22 @@ class AppThwackObject(object):
         self.__dict__.update(kwargs)
 
 
-class AppThwackProject(AppThwackObject, RequestsMixin):
+class AppThwackProject(AppThwackObject):
     """
     Represents an AppThwack project as returned by `AppThwackApi`.
     """
     attributes = 'id name url'.split()
 
+    def __new__(cls, *args, **kwargs):
+        project_types = [AppThwackAndroidProject, AppThwackWebProject, AppThwackIOSProject]
+        cls = project_types[kwargs.get('project_type_id', 1) - 1] #type_id isn't zero based
+        return super(AppThwackProject, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, **kwargs):
         super(AppThwackProject, self).__init__(**kwargs)
-        self.url = urlify('project', self.url)
 
     def __str__(self):
-        return self.url
+        return 'project/{0}'.format(self.url)
 
     def device_pool(self, **kwargs):
         """
@@ -208,7 +227,7 @@ class AppThwackProject(AppThwackObject, RequestsMixin):
         :param kwargs: 'id' or 'name' value to retrieve a specific devicepool.
         """
         k, v = keyword_filter(('id', 'name'), **kwargs)
-        return next(filter(lambda p: getattr(p, str(k)) == v, self.device_pools()))
+        return next(iter(filter(lambda p: str(getattr(p, str(k))) == v, self.device_pools())), None)
 
     def device_pools(self):
         """
@@ -216,23 +235,34 @@ class AppThwackProject(AppThwackObject, RequestsMixin):
 
         .. endpoint:: [GET] /api/devicepool/<int:project_id>
         """
-        data = self.get('devicepools', self.id).json()
+        data = self.get('devicepool', self.id).json
         return [AppThwackDevicePool(**p) for p in data]
 
-    def _schedule_run(self, app, name, **kwargs):
+    def get_run(self, run_id):
+        """
+        Get an `AppThwackRun` for the given run id.
+
+        :param run_id: Id of a run we're looking to retrieve the results of .
+
+        .. endpoint:: [GET] /api/run/<int:project_id>/<int:run_id>
+        """
+        return AppThwackRun(self, run_id=run_id)
+
+    def _schedule_run(self, app, name, pool=None, **kwargs):
         """
         Schedule a run on AppThwack.
 
         :param name: Name of run to be used on AppThwack.
-        :param app: `AppThwackFile` which represents the upload app (.apk or .ipa)..
+        :param app: `AppThwackFile` which represents the upload app (.apk or .ipa).
+        :param pool: (optional) `AppThwackDevicePool` to define subset of devices to test on.
         :param kwargs: Mapping of optional args which describe execution options.
 
         .. endpoint:: [POST] /api/run
         """
-        req = dict(project=self.id, name=name, app=app)
+        req = dict(project=self.id, name=name, app=app, pool=pool.id if pool else None)
         opt = dict((k, v) for (k, v) in kwargs.items() if v is not None)
-        data = self.post('run', data=dict(req, **opt)).json()
-        return AppThwackRun(self.id, **data)
+        data = self.post('run', data=dict(req, **opt)).json
+        return AppThwackRun(self, **data)
 
 
 class AppThwackAndroidProject(AppThwackProject):
@@ -328,22 +358,27 @@ class AppThwackWebProject(AppThwackProject):
         super(AppThwackWebProject, self).__init__(**kwargs)
 
     def schedule_web_run(self, url, name):
+        """
+        Schedule a response web run.
+
+        :param url: URL of website to test.
+        :param name: Name of the run which appears on AppThwack.
+        """
         return self._schedule_run(url, name)
 
 
-class AppThwackRun(AppThwackObject, RequestsMixin):
+class AppThwackRun(AppThwackObject):
     """
     Represents a scheduled run returned by `AppThwackProject`.
     """
     attributes = 'run_id'.split()
 
-    def __init__(self, project_id, **kwargs):
+    def __init__(self, project, **kwargs):
         super(AppThwackRun, self).__init__(**kwargs)
-        self.url = urlify('run', project_id, self.run_id)
-        self.download_url = urlify(self.url, format='archive')
+        self.project = project
 
     def __str__(self):
-        return self.url
+        return '{0}/run/{1}'.format(self.project, self.run_id)
 
     def status(self):
         """
@@ -351,7 +386,7 @@ class AppThwackRun(AppThwackObject, RequestsMixin):
 
         .. endpoint:: [GET] /api/run/<int:project_id>/<int:run_id>/status
         """
-        data = self.get(self.url, 'status').json()
+        data = self.get('run', self.project.id, self.run_id, 'status').json
         return data.get('status')
 
     def results(self):
@@ -360,7 +395,7 @@ class AppThwackRun(AppThwackObject, RequestsMixin):
 
         .. endpoint:: [GET] /api/run/<int:project_id>/<int:run_id>
         """
-        data = self.get(self.url).json()
+        data = self.get('run', self.project.id, self.run_id).json
         return AppThwackResult(self, **data)
 
     def download(self):
@@ -370,13 +405,13 @@ class AppThwackRun(AppThwackObject, RequestsMixin):
         .. endpoint:: [GET] /api/run/<int:project_id>/<int:run_id>?format=archive
         """
         filename = 'tmp.zip'
-        response = self.get(self.download_url)
+        response = self.get('run', self.project.id, self.run_id, format='archive')
         with open(filename, 'wb') as f:
             for chunk in response.iter_content(4096):
                 f.write(chunk)
 
 
-class AppThwackResult(AppThwackObject, RequestsMixin):
+class AppThwackResult(AppThwackObject):
     """
     Represents the results of a scheduled run returned by `AppThwackRun`.
     """
@@ -393,10 +428,9 @@ class AppThwackFile(AppThwackObject):
 
     def __init__(self, **kwargs):
         super(AppThwackFile, self).__init__(**kwargs)
-        self.url = urlify('file', self.file_id)
 
     def __str__(self):
-        return self.url
+        return 'file/{0}'.format(self.file_id)
 
 
 class AppThwackDevicePool(AppThwackObject):
@@ -407,7 +441,6 @@ class AppThwackDevicePool(AppThwackObject):
 
     def __init__(self, **kwargs):
         super(AppThwackDevicePool, self).__init__(**kwargs)
-        self.url = urlify('devicepool', self.id)
 
     def __str__(self):
-        return self.url
+        return 'devicepool/{0}'.format(self.id)
