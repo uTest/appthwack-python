@@ -23,14 +23,85 @@ Installation
 Usage
 =====
 
-TODO
+Configure the AppThwack client:
+
+```python
+import appthwack
+
+API_KEY = '...'
+api = appthwack.AppThwackApi(API_KEY)
+```
+
+Select a project:
+
+```python
+#...
+
+project = api.project(id=1234)
+project = api.project(name='Mutt Cuts')
+projects = api.projects()
+```
+
+Select a device pool:
+
+```python
+#...
+
+device_pool = project.device_pool(id=42)
+device_pool = project.device_pool(name='72 Sheepdog')
+device_pools = project.device_pools()
+```
+
+Upload your app and test content:
+
+```python
+#...
+
+apk = api.upload('/src/samsonite.apk')
+tests = api.upload('src/gotworms.apk')
+```
+
+Schedule AppThwack AppExplorer test run:
+
+```python
+#...
+
+name = 'Seabass and the fellas'
+run = project.schedule_app_explorer_run(apk, tests, name, device_pool))
+```
+
+Schedule Calabash test run:
+
+```python
+#...
+
+name = 'His head fell off!'
+run = project.schedule_calabash_run(apk, tests, name, device_pool)
+```
+
+Schedule JUnit/Robotium test run:
+
+```python
+#...
+
+name = 'Totally redeem yourself!'
+run = project.schedule_junit_run(apk, tests, name, device_pool)
+```
+
+Get run execution status:
+
+```python
+#...
+
+status = run.status() #new, queued, running, completed
+```
 
 Dependencies
 ============
 
 This project was built on the shoulders of others:
 
-*  [requests](http://docs.python-requests.org/en/latest/)
+*  [requests](http://docs.python-requests.org/en/latest/) by Kenneth Reitz
 
 Documentation
 =============
