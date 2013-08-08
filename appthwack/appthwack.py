@@ -182,7 +182,7 @@ class AppThwackApi(RequestsMixin):
             return AppThwackFile(**data)
 
 
-class AppThwackObject(RequestsMixin):
+class AppThwackObject(object):
     """
     Generic object built from JSON data returned from AppThwack.
     """
@@ -202,7 +202,7 @@ class AppThwackObject(RequestsMixin):
         self.__dict__.update(kwargs)
 
 
-class AppThwackProject(AppThwackObject):
+class AppThwackProject(AppThwackObject, RequestsMixin):
     """
     Represents an AppThwack project as returned by `AppThwackApi`.
     """
@@ -367,7 +367,7 @@ class AppThwackWebProject(AppThwackProject):
         return self._schedule_run(url, name)
 
 
-class AppThwackRun(AppThwackObject):
+class AppThwackRun(AppThwackObject, RequestsMixin):
     """
     Represents a scheduled run returned by `AppThwackProject`.
     """
@@ -396,7 +396,7 @@ class AppThwackRun(AppThwackObject):
         .. endpoint:: [GET] /api/run/<int:project_id>/<int:run_id>
         """
         data = self.get('run', self.project.id, self.run_id).json
-        return AppThwackResult(self, **data)
+        return AppThwackResult(**data)
 
     def download(self):
         """
@@ -415,9 +415,19 @@ class AppThwackResult(AppThwackObject):
     """
     Represents the results of a scheduled run returned by `AppThwackRun`.
     """
+    attributes = ('failures_by_job', 'failures_by_device', 'failures_by_type', 'warnings_by_job', 'warnings_by_device',
+                  'warnings_by_type', 'performance', 'performance_summary', 'summary')
 
-    #TODO capture everything, not just the summary
-    attributes = 'summary'.split()
+    def __init__(self, **kwargs):
+        super(AppThwackResult, self).__init__(**kwargs)
+
+    def __str__(self):
+        result_id = self.summary['id']
+        status = self.summary['status']
+        name = self.summary['name']
+        initiator = self.summary['initiator']
+        result = self.summary['result']
+        return "[{result_id}]: Run {name} by {initiator} is '{status}' with result '{result}'.".format(**locals())
 
 
 class AppThwackFile(AppThwackObject):

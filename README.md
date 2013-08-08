@@ -58,7 +58,7 @@ Upload your app and test content:
 #...
 
 apk = api.upload('/src/samsonite.apk')
-tests = api.upload('src/gotworms.apk')
+tests = api.upload('/src/gotworms.apk')
 ```
 
 Schedule AppThwack AppExplorer test run:
@@ -93,7 +93,16 @@ Get run execution status:
 ```python
 #...
 
-status = run.status() #new, queued, running, completed
+status = run.status() # new, queued, running, completed
+```
+
+Get run results:
+```python
+#...
+
+results = run.results()
+print results # [12345]: Run Hello World! by admin is 'completed' with result 'pass'.
+
 ```
 
 Dependencies
