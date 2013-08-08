@@ -77,7 +77,7 @@ class RequestsMixin(object):
     SESSION_DEFAULTS = {
         'verify': False,
         'headers': {
-            'user-agent': 'appthwack-python/1.0'
+            'user-agent': 'appthwack-python/1.0.0'
         }
     }
 

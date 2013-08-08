@@ -1,13 +1,15 @@
 __author__ = 'Andrew Hawker <andrew@appthwack.com>'
 
+import appthwack
+
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
 setup(
-    name='appthwack',
-    version='1.0',
+    name=appthwack.__name__,
+    version=appthwack.__version__,
     description='AppThwack python client',
     long_description=open('README.md').read(),
     author='Andrew Hawker',
@@ -17,6 +19,7 @@ setup(
     package_dir={'appthwack': 'appthwack'},
     packages=['appthwack'],
     test_suite='tests',
+    install_requires=['requests'],
     classifiers=(
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
