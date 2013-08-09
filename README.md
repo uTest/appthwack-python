@@ -6,7 +6,7 @@ The official [AppThwack](https://appthwack.com) python client.
 Status
 ======
 
-Currently under active development.
+Initial 1.0 release.
 
 Installation
 ============
