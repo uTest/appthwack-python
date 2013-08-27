@@ -272,7 +272,7 @@ class AppThwackAndroidProject(AppThwackProject):
     def __init__(self, **kwargs):
         super(AppThwackAndroidProject, self).__init__(**kwargs)
 
-    def schedule_junit_run(self, app, test_app, name, pool=None):
+    def schedule_junit_run(self, app, test_app, name, pool=None, test_filter=None):
         """
         Schedule JUnit/Robotium run.
 
@@ -280,10 +280,11 @@ class AppThwackAndroidProject(AppThwackProject):
         :param test_app: `AppThwackFile` which represents the uploaded tests .apk.
         :param name: Name of the run which appears on AppThwack.
         :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
+        :param test_filter: (optional) Comma separated string to specify TestCase/TestSuite to run.
         """
-        return self._schedule_run(app.file_id, name, pool=pool, junit=test_app.file_id)
+        return self._schedule_run(app.file_id, name, pool, junit=test_app.file_id, testfilter=test_filter)
 
-    def schedule_calabash_run(self, app, scripts, name, pool=None):
+    def schedule_calabash_run(self, app, scripts, name, pool=None, tags=None):
         """
         Schedule Calabash run.
 
@@ -291,8 +292,9 @@ class AppThwackAndroidProject(AppThwackProject):
         :param scripts: `AppThwackFile` which represents the uploaded features.zip.
         :param name: Name of the run which appears on AppThwack.
         :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
+        :param tags: (optional) Tags to be passed to Calabash run.
         """
-        return self._schedule_run(app.file_id, name, pool=pool, calabash=scripts.file_id)
+        return self._schedule_run(app.file_id, name, pool, calabash=scripts.file_id, calabashtags=tags)
 
     def schedule_monkeytalk_run(self, *args, **kwargs):
         raise NotImplementedError('TODO')
@@ -307,7 +309,7 @@ class AppThwackAndroidProject(AppThwackProject):
         :param kwargs: (optional) Options to configure the AppExplorer.
         """
         explorer_args = dict((k, kwargs.get(k)) for k in 'username password launchdata eventcount monkeyseed'.split())
-        return self._schedule_run(app.file_id, name, pool=pool, **explorer_args)
+        return self._schedule_run(app.file_id, name, pool, **explorer_args)
 
 
 class AppThwackIOSProject(AppThwackProject):
@@ -326,9 +328,9 @@ class AppThwackIOSProject(AppThwackProject):
         :param name: Name of the run which appears on AppThwack.
         :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
         """
-        return self._schedule_run(app.file_id, name, pool=pool, uia=scripts.file_id)
+        return self._schedule_run(app.file_id, name, pool, uia=scripts.file_id)
 
-    def schedule_calabash_run(self, app, scripts, name, pool=None):
+    def schedule_calabash_run(self, app, scripts, name, pool=None, tags=None):
         """
         Schedule Calabash run.
 
@@ -336,8 +338,9 @@ class AppThwackIOSProject(AppThwackProject):
         :param scripts: `AppThwackFile` which represents the uploaded features.zip.
         :param name: Name of the run which appears on AppThwack.
         :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
+        :param pool: (optional) Tags to be passed to Calabash run.
         """
-        return self._schedule_run(app.file_id, name, pool=pool, calabash=scripts.file_id)
+        return self._schedule_run(app.file_id, name, pool, calabash=scripts.file_id, calabashtags=tags)
 
     def schedule_kif_run(self, app, name, pool=None):
         """
@@ -347,7 +350,7 @@ class AppThwackIOSProject(AppThwackProject):
         :param name: Name of the run which appears on AppThwack.
         :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
         """
-        return self._schedule_run(app.file_id, name, pool=pool, kif='')
+        return self._schedule_run(app.file_id, name, pool, kif='')
 
 
 class AppThwackWebProject(AppThwackProject):

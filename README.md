@@ -67,7 +67,7 @@ Schedule AppThwack AppExplorer test run:
 #...
 
 name = 'Seabass and the fellas'
-run = project.schedule_app_explorer_run(apk, tests, name, device_pool))
+run = project.schedule_app_explorer_run(apk, tests, name, device_pool)
 ```
 
 Schedule Calabash test run:
