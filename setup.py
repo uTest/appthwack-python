@@ -19,9 +19,9 @@ setup(
     package_dir={'appthwack': 'appthwack'},
     packages=['appthwack'],
     test_suite='tests',
-    install_requires=['requests'],
+    install_requires=['requests==0.13.2'],
     classifiers=(
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'License :: OSI Approved :: MIT License',
