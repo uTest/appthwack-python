@@ -238,7 +238,7 @@ class AppThwackProject(AppThwackObject, RequestsMixin):
         data = self.get('devicepool', self.id).json
         return [AppThwackDevicePool(**p) for p in data]
 
-    def get_run(self, run_id):
+    def run(self, run_id):
         """
         Get an `AppThwackRun` for the given run id.
 
@@ -259,7 +259,7 @@ class AppThwackProject(AppThwackObject, RequestsMixin):
 
         .. endpoint:: [POST] /api/run
         """
-        req = dict(project=self.id, name=name, app=app, pool=pool.id if pool else None)
+        req = dict(project=self.id, name=name, app=app.file_id, pool=pool.id if pool else None)
         opt = dict((k, v) for (k, v) in kwargs.items() if v is not None)
         data = self.post('run', data=dict(req, **opt)).json
         return AppThwackRun(self, **data)
@@ -282,7 +282,7 @@ class AppThwackAndroidProject(AppThwackProject):
         :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
         :param test_filter: (optional) Comma separated string to specify TestCase/TestSuite to run.
         """
-        return self._schedule_run(app.file_id, name, pool, junit=test_app.file_id, testfilter=test_filter)
+        return self._schedule_run(app, name, pool, junit=test_app.file_id, testfilter=test_filter)
 
     def schedule_calabash_run(self, app, scripts, name, pool=None, tags=None):
         """
@@ -294,10 +294,17 @@ class AppThwackAndroidProject(AppThwackProject):
         :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
         :param tags: (optional) Tags to be passed to Calabash run.
         """
-        return self._schedule_run(app.file_id, name, pool, calabash=scripts.file_id, calabashtags=tags)
+        return self._schedule_run(app, name, pool, calabash=scripts.file_id, calabashtags=tags)
 
-    def schedule_monkeytalk_run(self, *args, **kwargs):
-        raise NotImplementedError('TODO')
+    def schedule_monkeytalk_run(self, app, tests, name, pool=None, **kwargs):
+        """
+        Schedule MonkeyTalk run.
+        :param app: `AppThwackFile` which represents the uploaded .apk.
+        :param tests: `AppThwackFile` which represents the uploaded tests archive.
+        :param name: Name of the run which appears on AppThwack.
+        :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
+        """
+        return self._schedule_run(app, name, pool, monkeytalk=tests.file_id)
 
     def schedule_app_explorer_run(self, app, name, pool=None, **kwargs):
         """
@@ -309,7 +316,7 @@ class AppThwackAndroidProject(AppThwackProject):
         :param kwargs: (optional) Options to configure the AppExplorer.
         """
         explorer_args = dict((k, kwargs.get(k)) for k in 'username password launchdata eventcount monkeyseed'.split())
-        return self._schedule_run(app.file_id, name, pool, **explorer_args)
+        return self._schedule_run(app, name, pool, **explorer_args)
 
 
 class AppThwackIOSProject(AppThwackProject):
@@ -328,7 +335,7 @@ class AppThwackIOSProject(AppThwackProject):
         :param name: Name of the run which appears on AppThwack.
         :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
         """
-        return self._schedule_run(app.file_id, name, pool, uia=scripts.file_id)
+        return self._schedule_run(app, name, pool, uia=scripts.file_id)
 
     def schedule_calabash_run(self, app, scripts, name, pool=None, tags=None):
         """
@@ -340,7 +347,7 @@ class AppThwackIOSProject(AppThwackProject):
         :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
         :param pool: (optional) Tags to be passed to Calabash run.
         """
-        return self._schedule_run(app.file_id, name, pool, calabash=scripts.file_id, calabashtags=tags)
+        return self._schedule_run(app, name, pool, calabash=scripts.file_id, calabashtags=tags)
 
     def schedule_kif_run(self, app, name, pool=None):
         """
@@ -350,7 +357,7 @@ class AppThwackIOSProject(AppThwackProject):
         :param name: Name of the run which appears on AppThwack.
         :param pool: (optional) `AppThwackDevicePool` which represents a subset of devices to run on.
         """
-        return self._schedule_run(app.file_id, name, pool, kif='')
+        return self._schedule_run(app, name, pool, kif='')
 
 
 class AppThwackWebProject(AppThwackProject):
