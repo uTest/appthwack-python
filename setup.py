@@ -19,7 +19,7 @@ setup(
     package_dir={'appthwack': 'appthwack'},
     packages=['appthwack'],
     test_suite='tests',
-    install_requires=['requests==0.13.2'],
+    install_requires=['requests>=2.2'],
     classifiers=(
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',

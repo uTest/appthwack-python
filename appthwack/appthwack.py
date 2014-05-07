@@ -52,7 +52,7 @@ def expects(expected_status_code, expected_content_type):
             if status_code != expected_status_code:
                 msg = 'Got status code {0}; expected {1} with response {2}.'.format(status_code,
                                                                                     expected_status_code,
-                                                                                    response.json)
+                                                                                    response.json())
                 raise AppThwackApiError(msg)
             #Unexpected response content-type is considered an 'exceptional' case.
             if bool(content_type) != bool(expected_content_type) or \
@@ -158,7 +158,7 @@ class AppThwackApi(RequestsMixin):
 
         .. endpoint:: [GET] /api/project
         """
-        data = self.get('project').json
+        data = self.get('project').json()
         return [AppThwackProject(**p) for p in data]
 
     def upload(self, path, name=None):
@@ -178,7 +178,7 @@ class AppThwackApi(RequestsMixin):
         if not name:
             name = os.path.basename(root) + ext
         with open(path, 'r') as fileobj:
-            data = self.post('file', data=dict(name=name), files=dict(file=fileobj)).json
+            data = self.post('file', data=dict(name=name), files=dict(file=fileobj)).json()
             return AppThwackFile(**data)
 
 
@@ -235,7 +235,7 @@ class AppThwackProject(AppThwackObject, RequestsMixin):
 
         .. endpoint:: [GET] /api/devicepool/<int:project_id>
         """
-        data = self.get('devicepool', self.id).json
+        data = self.get('devicepool', self.id).json()
         return [AppThwackDevicePool(**p) for p in data]
 
     def run(self, run_id):
@@ -261,7 +261,7 @@ class AppThwackProject(AppThwackObject, RequestsMixin):
         """
         req = dict(project=self.id, name=name, app=app.file_id, pool=pool.id if pool else None)
         opt = dict((k, v) for (k, v) in kwargs.items() if v is not None)
-        data = self.post('run', data=dict(req, **opt)).json
+        data = self.post('run', data=dict(req, **opt)).json()
         return AppThwackRun(self, **data)
 
 
@@ -396,7 +396,7 @@ class AppThwackRun(AppThwackObject, RequestsMixin):
 
         .. endpoint:: [GET] /api/run/<int:project_id>/<int:run_id>/status
         """
-        data = self.get('run', self.project.id, self.run_id, 'status').json
+        data = self.get('run', self.project.id, self.run_id, 'status').json()
         return data.get('status')
 
     def results(self):
@@ -405,7 +405,7 @@ class AppThwackRun(AppThwackObject, RequestsMixin):
 
         .. endpoint:: [GET] /api/run/<int:project_id>/<int:run_id>
         """
-        data = self.get('run', self.project.id, self.run_id).json
+        data = self.get('run', self.project.id, self.run_id).json()
         return AppThwackResult(**data)
 
     def download(self):
