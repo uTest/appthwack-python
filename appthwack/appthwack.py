@@ -105,6 +105,18 @@ class RequestsMixin(object):
         config = self._session_config(**kwargs)
         return requests.post(url, **config)
 
+    @expects(200, 'application/json')
+    def put(self, *resources, **kwargs):
+        """
+        Perform HTTP PUT which expects status_code: 200 and content-type: application/json.
+
+        :param resources: List of resources which build the URL we wish to use.
+        :param kwargs: Mapping of options to use for this specific HTTP request.
+        """
+        url = self._urlify(*resources)
+        config = self._session_config(**kwargs)
+        return requests.put(url, **config)
+
     def _session_config(self, **kwargs):
         """
         Merge default, request specific and auth options to use in a HTTP request.
@@ -269,6 +281,8 @@ class AppThwackAndroidProject(AppThwackProject):
     """
     Represents Android specific AppThwack project.
     """
+    platform = 'android'
+
     def __init__(self, **kwargs):
         super(AppThwackAndroidProject, self).__init__(**kwargs)
 
@@ -323,6 +337,8 @@ class AppThwackIOSProject(AppThwackProject):
     """
     Represents iOS specific AppThwack project.
     """
+    platform = 'ios'
+
     def __init__(self, **kwargs):
         super(AppThwackIOSProject, self).__init__(**kwargs)
 
@@ -364,6 +380,8 @@ class AppThwackWebProject(AppThwackProject):
     """
     Represents Responsive Web specific AppThwack project.
     """
+    platform = 'web'
+
     def __init__(self, **kwargs):
         super(AppThwackWebProject, self).__init__(**kwargs)
 
@@ -389,6 +407,14 @@ class AppThwackRun(AppThwackObject, RequestsMixin):
 
     def __str__(self):
         return '{0}/run/{1}'.format(self.project, self.run_id)
+
+    def cancel(self):
+        """
+        Cancels test run.
+
+        .. endpoint:: [PUT] /api/run/<int:project_id>/<int:run_id>/cancel
+        """
+        return self.put('run', self.project.id, self.run_id, 'cancel').json()
 
     def status(self):
         """
